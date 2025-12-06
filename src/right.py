@@ -16,7 +16,7 @@ from vex import *
 
 #variables
 e_brake_is_up = False
-descorer_is_up = False
+# descorer_is_up = False
 match_loader_is_up = False
 
 # intializations
@@ -26,7 +26,7 @@ drive_train_intertial = Inertial(Ports.PORT19) # intertial sensor
 
 # pneumatics
 e_brake = DigitalOut(brain.three_wire_port.a) # e brake wheel
-descorer = DigitalOut(brain.three_wire_port.b) 
+# descorer = DigitalOut(brain.three_wire_port.b) 
 match_loader = DigitalOut(brain.three_wire_port.c)
 
 #distance sensors
@@ -50,6 +50,18 @@ right_motor_group = MotorGroup(right_motor_a, right_motor_b)
 drive_train = SmartDrive(left_motor_group, right_motor_group, drive_train_intertial, 250, 300, 100, MM, 6)
 
 # functions
+
+def entrance(): # only start entrance motor
+    intake_motor_entrance.spin(FORWARD)
+
+def entrance_stop(): # stop entrance motor
+    intake_motor_entrance.stop()
+
+def entrance_intake_for_seconds(sec):
+    entrance()
+    wait(sec, SECONDS)
+    entrance_stop()
+    
 def intake(): # start intake
     intake_motor_entrance.spin(FORWARD)
     while not distance_a.is_object_detected() and not distance_b.is_object_detected(): # while no blocks in top chamber spin the top motor
@@ -93,13 +105,13 @@ def match_loader_down():
     match_loader.set(False)
     match_loader_is_up = True
 
-def descorer_up():
-    descorer.set(True)
-    descorer_is_up = True
+# def descorer_up():
+#     descorer.set(True)
+#     descorer_is_up = True
 
-def descorer_down():
-    descorer.set(False)
-    descorer_is_up = False
+# def descorer_down():
+#     descorer.set(False)
+#     descorer_is_up = False
 
 # main functions
 
@@ -158,18 +170,25 @@ def user_control():
         elif not e_brake_is_up:
             controller.buttonUp.pressed(e_brake_up)
 
-        if descorer_is_up:
-            controller.buttonL2.pressed(descorer_down)
-        elif not descorer_is_up:
-            controller.buttonL2.pressed(descorer_up)
+        # if descorer_is_up:
+        #     controller.buttonL2.pressed(descorer_down)
+        # elif not descorer_is_up:
+        #     controller.buttonL2.pressed(descorer_up)
 
         if match_loader_is_up: # map match loader functions to one button
             controller.buttonDown.pressed(match_loader_down)
         elif not e_brake_is_up:
             controller.buttonDown.pressed(match_loader_up)
 
-        controller.buttonR1.pressed(intake) # can change buttons later
-        controller.buttonL1.pressed(outtake) # can change buttons later
+        controller.buttonR2.pressed(entrance)
+        controller.buttonR2.released(entrance_stop)
+
+        controller.buttonR1.pressed(intake)
+        controller.buttonR1.released(intake_stop)
+
+        controller.buttonL1.pressed(outtake)
+        controller.buttonL1.released(outtake_stop)
+
 
         wait(20, MSEC)
 # create competition instance
