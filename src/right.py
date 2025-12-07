@@ -16,7 +16,7 @@ from vex import *
 
 #variables
 e_brake_is_up = False
-# descorer_is_up = False
+descorer_is_up = False
 match_loader_is_up = False
 
 # intializations
@@ -25,13 +25,13 @@ controller = Controller()
 drive_train_intertial = Inertial(Ports.PORT19) # intertial sensor
 
 # pneumatics
-e_brake = DigitalOut(brain.three_wire_port.a) # e brake wheel
-# descorer = DigitalOut(brain.three_wire_port.b) 
-match_loader = DigitalOut(brain.three_wire_port.c)
+e_brake = DigitalOut(brain.three_wire_port.h) # e brake wheel
+descorer = DigitalOut(brain.three_wire_port.f) 
+match_loader = DigitalOut(brain.three_wire_port.g)
 
 #distance sensors
-distance_a = Distance(Ports.PORT10) # distance sensor top
-distance_b = Distance(Ports.PORT11) # distance sensor bottom
+# distance_a = Distance(Ports.PORT10) # distance sensor top
+# distance_b = Distance(Ports.PORT11) # distance sensor bottom
 
 # define motors
 intake_motor_entrance = Motor(Ports.PORT2, True) # entrance intake
@@ -129,30 +129,53 @@ def match_loader_toggle(): # for manual, map match loader to one button toggle
     else:
         match_loader_up()
 
+def descorer_up():
+    global descorer_is_up
 
-# def descorer_up():
-#     descorer.set(True)
-#     descorer_is_up = True
+    descorer.set(True)
+    descorer_is_up = True
+def descorer_down():
+    global descorer_is_up
 
-# def descorer_down():
-#     descorer.set(False)
-#     descorer_is_up = False
+    descorer.set(False)
+    descorer_is_up = False
+
+def descorer_toggle():
+    global descorer_is_up
+
+    if descorer_is_up:
+        descorer_down()
+    else:
+        descorer_up()
+
+# movement functions
+
+def f(inch):
+    drive_train.drive_for(FORWARD, inch, INCHES)
+
+def b(inch):
+    drive_train.drive_for(REVERSE, inch, INCHES)
+
+def r(deg):
+    drive_train.turn_for(RIGHT, deg, DEGREES)
+
+def l(deg):
+    drive_train.turn_for(LEFT, deg, DEGREES)
 
 # main functions
 
 def pre_autonomous(): # runs before autonomous
     e_brake_up()
     match_loader_up()
+    descorer_down()
     
     # calibrate inertial
     drive_train_intertial.calibrate()
     while drive_train_intertial.is_calibrating():
         wait(50, MSEC)
 
-pre_autonomous()
-
 def autonomous():
-    drive_train_intertial.set_heading(0) # reset heading
+    drive_train_intertial.set_heading(37.5) # update heading
 
     brain.screen.clear_screen()
     brain.screen.print("autonomous code")
@@ -162,22 +185,40 @@ def autonomous():
     outtake_motor.set_velocity(100, PERCENT)
 
     # route
-    # start intake
-    intake()
-    drive_train.drive_for(FORWARD, PLACEHOLDER, INCHES) # start forward
-    drive_train.turn_for(LEFT, DEGREESPLACEHOLDER, DEGREES) # right 
-    # stop intake
-    intake_stop()
-    drive_train.drive_for(REVERSE, PLACEHOLDER,INCHES) # backwards align with goal
-    drive_train.turn_for(LEFT, DEGREESPLACEHOLDER, DEGREES) # turn so output faces goal
-    drive_train.drive_for(REVERSE, PLACEHOLDER, INCHES) # back into goal
-    # start outtake
-    outtake()
+    intake() # start intaking
+    f(10) # start forward
+    r(90)# right 
+    intake_stop() # stop intaking
+    b(10) # backwards align with goal
+    l(45) # turn so output faces goal
+    b(10) # back into goal
+    outtake() # outtake into goal
     # if time + to column vvv
 
+    user_control() # remove at comp
+
 def user_control():
+    # open buttons:
+    # L2, Up, Down, Right, X, Y
+
     brain.screen.clear_screen()
     brain.screen.print("driver control")
+
+    # button functions
+    controller.buttonLeft.pressed(e_brake_toggle)
+    controller.buttonA.pressed(descorer_toggle)
+    controller.buttonB.pressed(match_loader_toggle)
+
+    # intake/outtake motors
+    controller.buttonR2.pressed(entrance) # run only entrance motor
+    controller.buttonR2.released(entrance_stop)
+
+    controller.buttonR1.pressed(intake) # run both intake motors
+    controller.buttonR1.released(intake_stop)
+
+    controller.buttonL1.pressed(outtake) # run all motors
+    controller.buttonL1.released(outtake_stop)
+
     # place driver control in this while loop
     while True:
         turn = controller.axis1.position()
@@ -191,30 +232,14 @@ def user_control():
         elif turn < 0:
             drive_train.turn(LEFT, -turn, VelocityUnits.PERCENT)
             brain.screen.print("turn LEFT\n")
-        # button functions
-        controller.buttonLeft.pressed(e_brake_toggle)
-        controller.buttonDown.pressed(match_loader_toggle)
-
-        # intake/outtake motors
-        controller.buttonR2.pressed(entrance) # run only entrance motor
-        controller.buttonR2.released(entrance_stop)
-
-        controller.buttonR1.pressed(intake) # run both intake motors
-        controller.buttonR1.released(intake_stop)
-
-        controller.buttonL1.pressed(outtake) # run all motors
-        controller.buttonL1.released(outtake_stop)
-
-
+        
         wait(20, MSEC)
+
+pre_autonomous()
+autonomous()
+
 # create competition instance
 # comp = Competition(user_control, autonomous)
 
 # actions to do when the program starts
 brain.screen.clear_screen()
-
-def a():
-    drive_train.drive_for(FORWARD, 10, INCHES)
-    drive_train.turn_for(RIGHT, 90, DEGREES)
-    
-a() # remove at comp
